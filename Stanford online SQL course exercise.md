@@ -76,16 +76,100 @@ group by movie.mID
 having year > 1980)  A;
 ```
 ## SQL Movie-Rating Query Exercises Extras
-1. 
+1. Find the names of all reviewers who rated Gone with the Wind. 
 ```sql
+select distinct name
+from reviewer join rating on reviewer.rID = rating.rID
+join movie on rating.mID = movie.mID
+where title = 'Gone with the Wind';
 ```
-
-
-
-
-10. 
+2. For any rating where the reviewer is the same as the director of the movie, return the reviewer name, movie title, and number of stars. 
 ```sql
-
+select name, title, stars
+from movie join rating on movie.mID = rating.mID
+join reviewer on rating.rID = reviewer.rID
+where name = director;
+```
+3. Return all reviewer names and movie names together in a single list, alphabetized. (Sorting by the first name of the reviewer and first word in the title is fine; no need for special processing on last names or removing "The".) 
+```sql
+select name
+from reviewer
+union
+select title
+from movie;
+```
+4. Find the titles of all movies not reviewed by Chris Jackson. 
+```sql
+select title
+from movie
+where mID not in (
+select movie.mID
+from movie join rating on movie.mID = rating.mID
+join reviewer on rating.rID = reviewer.rID
+where name = 'Chris Jackson'); 
+```
+5. For all pairs of reviewers such that both reviewers gave a rating to the same movie, return the names of both reviewers. Eliminate duplicates, don't pair reviewers with themselves, and include each pair only once. For each pair, return the names in the pair in alphabetical order. 
+```sql
+select distinct R1.name, R2.name
+from (rating join reviewer on rating.rID = reviewer.rID) R1
+, (rating join reviewer on rating.rID = reviewer.rID) R2
+where R1.mID = R2.mID and R1.name < R2.name
+order by R1.name, R2.name;
+```
+6. For each rating that is the lowest (fewest stars) currently in the database, return the reviewer name, movie title, and number of stars. 
+```sql
+select name, title, stars
+from rating join reviewer on rating.rID = reviewer.rID
+join movie on rating.mID = movie.mID
+where stars = (select min(stars) from rating);
+```
+7. List movie titles and average ratings, from highest-rated to lowest-rated. If two or more movies have the same average rating, list them in alphabetical order. 
+```sql
+select title, avg(stars)
+from rating join movie on rating.mID = movie.mID
+group by movie.mID
+order by avg(stars) desc, title;
+```
+8. Find the names of all reviewers who have contributed three or more ratings. (As an extra challenge, try writing the query without HAVING or without COUNT.) 
+```sql
+select name
+from reviewer join (
+select rating.rID, SUM(1) as c
+from rating 
+group by rID) R on R.rID = reviewer.rID
+where R.c >= 3;
+```
+9. Some directors directed more than one movie. For all such directors, return the titles of all movies directed by them, along with the director name. Sort by director name, then movie title. (As an extra challenge, try writing the query both with and without COUNT.) 
+```sql
+select title, director
+from movie
+where director in (select director from movie group by director having count(*) > 1)
+order by director, title;
+```
+10. Find the movie(s) with the highest average rating. Return the movie title(s) and average rating. (Hint: This query is more difficult to write in SQLite than other systems; you might think of it as finding the highest average rating and then choosing the movie(s) with that average rating.) 
+```sql
+select title, avg(stars)
+from movie join rating on movie.mID = rating.mID
+group by title
+having avg(stars) >= (select max(T.s) from (
+select avg(stars) as s
+from movie join rating on movie.mID = rating.mID
+group by title) T);
+```
+11. Find the movie(s) with the lowest average rating. Return the movie title(s) and average rating. (Hint: This query may be more difficult to write in SQLite than other systems; you might think of it as finding the lowest average rating and then choosing the movie(s) with that average rating.) 
+```sql
+select title, avg(stars)
+from movie join rating on movie.mID = rating.mID
+group by title
+having avg(stars) = (select min(T.s) from (
+select avg(stars) as s from movie join rating on movie.mID = rating.mID group by title) T);
+```
+12. For each director, return the director's name together with the title(s) of the movie(s) they directed that received the highest rating among all of their movies, and the value of that rating. Ignore movies whose director is NULL. 
+```sql
+select director, title, max(stars)
+from movie join rating on movie.mID = rating.mID
+where director is not NULL 
+group by director;
 ```
 
 
@@ -97,7 +181,7 @@ from highschooler H1 join friend on H1.ID = friend.ID1
 join highschooler H2 on H2.ID = friend.ID2
 where H1.name = 'Gabriel';
 ```
-2.For every student who likes someone 2 or more grades younger than themselves, return that student's name and grade, and the name and grade of the student they like. 
+2. For every student who likes someone 2 or more grades younger than themselves, return that student's name and grade, and the name and grade of the student they like. 
 ```sql
 select H1.name, H1.grade, H2.name, H2.grade
 from highschooler H1 join likes on H1.ID = likes.ID1 

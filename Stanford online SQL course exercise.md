@@ -171,8 +171,36 @@ from movie join rating on movie.mID = rating.mID
 where director is not NULL 
 group by director;
 ```
-
-
+## SQL Movie-Rating Modification Exercises
+1. Add the reviewer Roger Ebert to your database, with an rID of 209. 
+```sql
+insert into reviewer values ('209', 'Roger Ebert');
+```
+2. Insert 5-star ratings by James Cameron for all movies in the database. Leave the review date as NULL. 
+```sql
+insert into rating 
+select reviewer.rID, movie.mID, 5, null
+from reviewer, movie
+where name = 'James Cameron';
+```
+3. For all movies that have an average rating of 4 stars or higher, add 25 to the release year. (Update the existing tuples; don't insert new tuples.) 
+```sql
+update movie
+set year = year + 25
+where mID in (
+select movie.mID
+from movie join rating on movie.mID = rating.mID
+group by movie.mID
+having avg(stars) >= 4);
+```
+4. Remove all ratings where the movie's year is before 1970 or after 2000, and the rating is fewer than 4 stars. 
+```sql
+delete from rating
+where mID in (
+select movie.mID
+from movie join rating on movie.mID = rating.mID
+where year < 1970 or year > 2000) and stars < 4;
+```
 ## SQL Social-Network Query Exercises
 1. Find the names of all students who are friends with someone named Gabriel. 
 ```sql
@@ -232,3 +260,80 @@ where h1.ID = f1.ID1 and h3.ID = f1.ID2 and h2.ID = f2.ID1 and h3.ID = f2.ID2
 and h1.ID = likes.ID1 and h2.ID = likes.ID2
 and h2.ID not in (select friend.ID1 from friend where friend.ID2 = h1.ID);
 ```
+8. Find the difference between the number of students in the school and the number of different first names. 
+```sql
+select count(distinct ID) - count(distinct name)
+from highschooler;
+```
+9. Find the name and grade of all students who are liked by more than one other student. 
+```sql
+select h2.name, h2.grade
+from highschooler h1, likes, highschooler h2
+where h1.ID = likes.ID1 and h2.ID = likes.ID2 
+group by h2.ID
+having count(*) > 1;
+```
+## SQL Social-Network Query Exercises Extras
+1. For every situation where student A likes student B, but student B likes a different student C, return the names and grades of A, B, and C. 
+```sql
+select distinct h1.name, h1.grade, h2.name, h2.grade, h3.name, h3.grade
+from highschooler h1, highschooler h2, highschooler h3, likes l1, likes l2
+where h1.ID = l1.ID1 and h2.ID = l1.ID2 and h2.ID = l2.ID1 and h3.ID = l2.ID2 and h1.ID <> h3.ID;
+```
+2. Find those students for whom all of their friends are in different grades from themselves. Return the students' names and grades. 
+```sql
+select h1.name, h1.grade
+from highschooler h1, highschooler h2, friend 
+where h1.ID = friend.ID1 and h2.ID = friend.ID2 
+except
+select h1.name, h1.grade
+from highschooler h1, highschooler h2, friend 
+where h1.ID = friend.ID1 and h2.ID = friend.ID2 and h1.grade = h2.grade;
+```
+3. What is the average number of friends per student? (Your result should be just one number.) 
+```sql
+select avg(T.c)
+from(
+select count(*) as c
+from friend 
+group by ID1) T;
+```
+4. Find the number of students who are either friends with Cassandra or are friends of friends of Cassandra. Do not count Cassandra, even though technically she is a friend of a friend. 
+```sql
+select count(distinct h2.ID) + count(distinct h3.ID)
+from highschooler h1, highschooler h2, highschooler h3, friend f1, friend f2
+where h1.ID = f1.ID1 and h2.ID = f1.ID2 and h2.ID = f2.ID1 and h3.ID = f2.ID2 and
+h1.name = 'Cassandra' and h3.name <> 'Cassandra';
+```
+5. Find the name and grade of the student(s) with the greatest number of friends. 
+```sql
+select h1.name, h1.grade
+from highschooler h1 join friend 
+on h1.ID = friend.ID1
+group by h1.ID
+having count(*) = (select max(T.c) from (select count(*) as c from friend group by friend.ID1) T);
+```
+## SQL Social-Network Modification Exercises
+1. It's time for the seniors to graduate. Remove all 12th graders from Highschooler. 
+```sql
+delete from highschooler
+where grade = 12;
+```
+2. If two students A and B are friends, and A likes B but not vice-versa, remove the Likes tuple. 
+```sql
+delete from likes
+where likes.ID2 in (select friend.ID2 from friend where friend.ID1 = likes.ID1) and 
+likes.ID1 not in (select l.ID2 from likes l where l.ID1 = likes.ID2);
+```
+3. For all cases where A is friends with B, and B is friends with C, add a new friendship for the pair A and C. Do not add duplicate friendships, friendships that already exist, or friendships with oneself. (This one is a bit challenging; congratulations if you get it right.) 
+```sql
+insert into friend
+select distinct f1.ID1, f2.ID2
+from friend f1, friend f2
+where f1.ID2 = f2.ID1 and f1.ID1 <> f2.ID2
+except
+select f.ID1, f.ID2
+from friend f;
+```
+
+
